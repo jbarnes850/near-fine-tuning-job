@@ -14,21 +14,25 @@ import concurrent.futures
 import pickle
 from datetime import datetime, timedelta
 from tqdm import tqdm
+import random
 
 # Load environment variables
 load_dotenv()
 print("Environment variables loaded.")
 
-# Add this after loading environment variables
-if not os.getenv("GITHUB_API_KEY"):
+github_api_key = os.getenv("GITHUB_API_KEY")
+if not github_api_key:
     raise ValueError("GITHUB_API_KEY environment variable is not set. Please set it in your .env file.")
 if not os.getenv("OPENAI_API_KEY"):
     raise ValueError("OPENAI_API_KEY environment variable is not set. Please set it in your .env file.")
 
+# Initialize GitHub API
+github_client = Github(github_api_key)
+print("GitHub client initialized.")
+
 # Authenticate using GitHub and OpenAI API keys
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-github_client = Github(os.getenv("GITHUB_API_KEY"))
-print("GitHub and OpenAI clients initialized.")
+print("OpenAI client initialized.")
 
 # List of repositories to pull from
 repos = [
@@ -422,7 +426,7 @@ if __name__ == "__main__":
     try:
         print("Starting NEAR fine-tuning data preparation...")
 
-        # Add this after loading environment variables
+        # Check GitHub API key
         if not os.getenv("GITHUB_API_KEY"):
             raise ValueError("GITHUB_API_KEY environment variable is not set. Please set it in your .env file.")
         if not os.getenv("OPENAI_API_KEY"):
