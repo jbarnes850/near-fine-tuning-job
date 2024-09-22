@@ -2,7 +2,7 @@ import sys
 import logging
 import openai
 from config import load_config, validate_config
-from api_clients import get_github_client, get_openai_client, validate_openai_api_key
+from api_clients import get_github_client, initialize_openai, validate_openai_api_key
 from data_fetchers import DataFetcher
 from data_processors import DataProcessor
 from fine_tuning import FineTuner
@@ -18,14 +18,14 @@ def main():
 
     # Initialize API clients
     github_client = get_github_client()
-    openai_client = get_openai_client()  # This sets the API key in the openai module
+    initialize_openai()
     validate_openai_api_key()
     logging.info("API clients initialized.")
 
     # Initialize components
     data_fetcher = DataFetcher(github_client, config)
-    data_processor = DataProcessor(openai_client, config)
-    fine_tuner = FineTuner(openai, config)
+    data_processor = DataProcessor(config)
+    fine_tuner = FineTuner(config)
 
     # Fetch data from GitHub repositories
     logging.info("Fetching data from GitHub repositories...")
@@ -38,13 +38,13 @@ def main():
     # Fetch data from articles
     logging.info("Fetching data from articles...")
     all_article_data = {}
-    for url in config['articles']:
+    for url in config['articles']['urls']:
         article_data = data_fetcher.fetch_article_data(url)
         if article_data:
             all_article_data[url] = article_data
 
     # Process fetched data
-    logging.info("Processing data...")
+    logging.info("Processing fetched data...")
     processed_data = []
     for repo_name, repo_data in all_repo_data.items():
         processed = data_processor.process_repo_data(repo_data)
@@ -54,7 +54,7 @@ def main():
         processed = data_processor.process_article_data(article_text)
         processed_data.extend(processed)
 
-    # Generate refined examples using GPT-4o-mini
+    # Generate refined examples using OpenAI API
     logging.info("Generating refined examples...")
     refined_examples = data_processor.generate_refined_examples(processed_data)
 
@@ -73,7 +73,7 @@ def main():
         logging.info("Fine-tuning process cancelled.")
         sys.exit()
 
-    # Fine-tuning process using GPT-4o
+    # Fine-tuning process
     logging.info("Starting fine-tuning process...")
     training_file_id = fine_tuner.upload_training_file("fine_tuning_data.jsonl")
     job_id = fine_tuner.create_fine_tune_job(training_file_id)

@@ -13,30 +13,29 @@ def validate_config(config):
     """Validate configuration parameters."""
     required_keys = [
         'github', 'articles', 'cache', 'fine_tuning', 'openai',
-        'logging', 'rate_limit', 'data_processing', 'example_generation',
-        'evaluation', 'deployment', 'security', 'content_filtering'
+        'logging', 'data_processing', 'example_generation'
     ]
     missing_keys = [key for key in required_keys if key not in config]
     if missing_keys:
         raise ValueError(f"Missing required configuration keys: {missing_keys}")
 
-    # Add specific validations as needed
-    if 'repos' not in config['github']:
+    # Validate nested keys
+    if 'repos' not in config['github'] or not config['github']['repos']:
         raise ValueError("GitHub repositories are not specified in the configuration.")
-    if not config['github']['repos']:
-        raise ValueError("GitHub repositories list is empty.")
-    if 'api_key' not in config['openai']:
-        raise ValueError("OpenAI API key not specified in the configuration.")
+    if 'model' not in config['openai']:
+        raise ValueError("OpenAI model not specified in the configuration.")
     if 'model' not in config['fine_tuning']:
         raise ValueError("Fine-tuning model not specified in the configuration.")
 
     # Validate numeric parameters
-    if config['fine_tuning']['n_epochs'] <= 0:
-        raise ValueError("Number of epochs must be a positive integer.")
-    if config['fine_tuning']['target_examples'] <= 0:
-        raise ValueError("Target examples must be a positive integer.")
-    if config['fine_tuning']['max_tokens'] <= 0:
-        raise ValueError("Max tokens must be a positive integer.")
+    numeric_params = {
+        'n_epochs': config['fine_tuning']['n_epochs'],
+        'target_examples': config['fine_tuning']['target_examples'],
+        'max_tokens': config['fine_tuning']['max_tokens']
+    }
+    for param_name, param_value in numeric_params.items():
+        if param_value <= 0:
+            raise ValueError(f"{param_name} must be a positive integer.")
 
     # Validate logging level
     valid_logging_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']

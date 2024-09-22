@@ -13,14 +13,14 @@ def get_github_client():
         raise ValueError("GITHUB_API_KEY is not set in the environment variables.")
     return Github(github_api_key)
 
-def get_openai_client():
-    """Initialize and return an OpenAI client."""
+def initialize_openai():
+    """Initialize OpenAI by setting the API key."""
     load_dotenv()
     openai_api_key = os.getenv("OPENAI_API_KEY")
     if not openai_api_key:
         raise ValueError("OPENAI_API_KEY is not set in the environment variables.")
     openai.api_key = openai_api_key
-    return openai
+    logging.info("OpenAI client initialized.")
 
 @error_handler
 def validate_openai_api_key():

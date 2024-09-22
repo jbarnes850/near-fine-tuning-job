@@ -47,8 +47,8 @@ articles:
 
 # Caching Configuration
 cache:
-  dir: "cache"
-  expiry_days: 14
+  dir: 'cache'
+  expiry_days: 7
 
 # Fine-tuning Configuration
 fine_tuning:
@@ -71,75 +71,15 @@ openai:
 
 # Logging Configuration
 logging:
-  level: "INFO"
-  format: "%(asctime)s - %(levelname)s - %(message)s"
-  file: "fine_tuning.log"
-
-# Rate Limiting
-rate_limit:
-  min_calls: 100
-  sleep_time: 60
+  level: 'INFO'
+  format: '%(asctime)s - %(levelname)s - %(message)s'
+  file: 'app.log'
 
 # Data Processing
 data_processing:
-  max_content_length: 10000
-  min_content_length: 100
-  excluded_file_types: [".gitignore", ".md", ".txt"]
+  max_tokens: 1000
+  extensions: ['.md', '.py', '.rs', '.js', '.ts']
 
 # Example Generation
 example_generation:
-  prompt_templates:
-    - "Explain the concept of {topic} in NEAR Protocol."
-    - "How does {feature} work in NEAR, and how does it compare to other blockchains?"
-    - "What are the best practices for implementing {concept} in NEAR smart contracts?"
-    - "Describe the role of {component} in NEAR's architecture."
-    - "How can developers optimize {aspect} when building on NEAR?"
-
-# Model Evaluation
-evaluation:
-  test_set_size: 1000
-  metrics:
-    - "perplexity"
-    - "accuracy"
-    - "f1_score"
-
-# Deployment
-deployment:
-  model_name: "near-expert-{timestamp}"
-  deployment_environment: "production"
-  monitoring_interval: 3600  # in seconds
-
-# Security
-security:
-  encrypt_cached_data: true
-  encryption_key_env_var: "CACHE_ENCRYPTION_KEY"
-
-# Content Filtering
-content_filtering:
-  keywords:
-    - "NEAR Protocol"
-    - "sharding"
-    - "blockchain"
-    - "smart contract"
-    - "token"
-    - "staking"
-    - "validator"
-    - "transaction"
-    - "gas fee"
-    - "Aurora"
-    - "NEAR Wallet"
-    - "NEAR CLI"
-    - "NEAR SDK"
-    - "NEAR API"
-    - "Nightshade"
-    - "Rainbow Bridge"
-    - "NEAR Foundation"
-    - "Web3"
-    - "FastAuth"
-    - "MPC"
-    - "NEAR Lake"
-    - "Chain Abstraction"
-    - "Chain Signatures"
-    - "AI x Web3"
-    - "Agents"
-    - "User-owned AI"
+  batch_size: 5

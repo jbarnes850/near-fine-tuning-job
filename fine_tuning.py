@@ -4,8 +4,7 @@ import time
 import openai
 
 class FineTuner:
-    def __init__(self, openai_client, config):
-        self.client = openai_client
+    def __init__(self, config):
         self.config = config
 
     @error_handler
