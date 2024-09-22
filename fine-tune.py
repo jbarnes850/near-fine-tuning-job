@@ -19,6 +19,12 @@ from tqdm import tqdm
 load_dotenv()
 print("Environment variables loaded.")
 
+# Add this after loading environment variables
+if not os.getenv("GITHUB_API_KEY"):
+    raise ValueError("GITHUB_API_KEY environment variable is not set. Please set it in your .env file.")
+if not os.getenv("OPENAI_API_KEY"):
+    raise ValueError("OPENAI_API_KEY environment variable is not set. Please set it in your .env file.")
+
 # Authenticate using GitHub and OpenAI API keys
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 github_client = Github(os.getenv("GITHUB_API_KEY"))
@@ -35,12 +41,10 @@ repos = [
     "near/near-cli",
     "near/near-cli-rs",
     "near/wallet-selector",
-    "blocknative/web3-onboard",
     "near/fast-auth-signer",
     "near/mpc",
     "near/near-api-js",
     "fastnear/fastnear-api-server-rs",
-    "near/queryapi",
     "near/near-sdk-js",
     "near/near-sdk-rs",
     "near/near-workspaces-js",
@@ -112,6 +116,8 @@ def fetch_repo_data(repo_name):
     if cached_data:
         print(f"Using cached data for {repo_name}")
         return cached_data
+
+    check_rate_limit()  # Add this line to check rate limit before making API calls
 
     repo = github_client.get_repo(repo_name)
     branches = ["main", "master"]
@@ -350,8 +356,23 @@ def check_rate_limit():
     core_rate = rate_limit.core
     print(f"GitHub API Rate Limit: {core_rate.remaining}/{core_rate.limit}")
     if core_rate.remaining < 100:
-        reset_time = core_rate.reset.replace(tzinfo=None) - datetime.datetime.now()
-        print(f"Warning: Low on API calls. Resets in {reset_time}")
+        reset_time = core_rate.reset.replace(tzinfo=None)
+        current_time = datetime.now()
+        time_until_reset = reset_time - current_time
+        print(f"Warning: Low on API calls. Resets in {time_until_reset}")
+        
+        # If the reset time is in the future, start a countdown
+        if reset_time > current_time:
+            print("Waiting for rate limit to reset...")
+            with tqdm(total=int(time_until_reset.total_seconds()), desc="Time until reset", unit="s") as pbar:
+                while datetime.now() < reset_time:
+                    time.sleep(1)
+                    pbar.update(1)
+            print("Rate limit has been reset. Continuing with execution.")
+        else:
+            print("Rate limit should have already reset. Continuing with execution.")
+    else:
+        print("Sufficient API calls remaining. Continuing with execution.")
 
 def num_tokens_from_messages(messages, model="gpt-4o-2024-08-06"):
     """Calculate the number of tokens in the messages."""
@@ -377,10 +398,35 @@ def estimate_fine_tuning_cost(total_tokens):
     print(f"Estimated fine-tuning cost: ${estimated_cost:.2f}")
     return estimated_cost
 
+def validate_openai_api_key():
+    try:
+        client.models.list()
+        logging.info("OpenAI API key is valid.")
+    except Exception as e:
+        logging.error(f"Error validating OpenAI API key: {str(e)}")
+        raise ValueError("Invalid OpenAI API key. Please check your .env file.")
+
+def openai_api_call_with_retry(func, max_retries=3, *args, **kwargs):
+    for attempt in range(max_retries):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            if attempt == max_retries - 1:
+                logging.error(f"Max retries reached for OpenAI API call: {str(e)}")
+                raise
+            logging.warning(f"OpenAI API call failed, retrying... (Attempt {attempt + 1}/{max_retries})")
+            time.sleep(2 ** attempt)  # Exponential backoff
+
 # Main execution
 if __name__ == "__main__":
     try:
         print("Starting NEAR fine-tuning data preparation...")
+
+        # Add this after loading environment variables
+        if not os.getenv("GITHUB_API_KEY"):
+            raise ValueError("GITHUB_API_KEY environment variable is not set. Please set it in your .env file.")
+        if not os.getenv("OPENAI_API_KEY"):
+            raise ValueError("OPENAI_API_KEY environment variable is not set. Please set it in your .env file.")
 
         # Check GitHub API rate limit
         check_rate_limit()
