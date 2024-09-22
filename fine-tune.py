@@ -1,11 +1,15 @@
+import datetime
 import openai
 import os
 import json
 import time
+import random
 import requests
 from bs4 import BeautifulSoup
 from github import Github
 from dotenv import load_dotenv
+import tiktoken
+import logging
 
 # Load environment variables
 load_dotenv()
@@ -53,43 +57,63 @@ articles = [
     "https://pages.near.org/blog/ecosystem-update-announcing-near-one-chain-abstraction-spinouts/",
     "https://pages.near.org/blog/chain-signatures-mainnet-launches/",
     "https://pages.near.org/blog/getting-started-with-chain-signatures/",
-    "https://docs.near.ai/"
+    "https://docs.near.ai/",
     "https://pages.near.org/blog/near-foundation-launches-ai-incubation-program/"
 ]
 
 def fetch_repo_data(repo_name):
     """Fetch content of markdown and code files from a repository."""
     print(f"Fetching data from repository: {repo_name}")
-    try:
-        repo = github_client.get_repo(repo_name)
-        branches = ["main", "master"]
-        repo_data = {}
+    max_retries = 5
+    base_delay = 5  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            repo = github_client.get_repo(repo_name)
+            branches = ["main", "master"]
+            repo_data = {}
 
-        for branch in branches:
-            try:
-                contents = repo.get_contents("", ref=branch)
-                while contents:
-                    file_content = contents.pop(0)
-                    if file_content.type == "dir":
-                        contents.extend(repo.get_contents(file_content.path, ref=branch))
-                    elif file_content.name.endswith(('.md', '.rs', '.js', '.ts', '.py', '.yaml', '.json')):
-                        try:
-                            repo_data[file_content.path] = file_content.decoded_content.decode('utf-8')
-                        except UnicodeDecodeError:
-                            print(f"Warning: Unable to decode {file_content.path} in {repo_name}. Skipping this file.")
-                print(f"Fetched data from {repo_name} using {branch} branch")
-                return repo_data
-            except Exception as e:
-                if "No commit found for the ref" in str(e):
-                    continue
-                else:
-                    raise e
-        
-        print(f"Warning: No valid branch found for {repo_name}")
-        return {}
-    except Exception as e:
-        print(f"Failed to fetch data from {repo_name}: {str(e)}")
-        return {}
+            for branch in branches:
+                try:
+                    contents = repo.get_contents("", ref=branch)
+                    while contents:
+                        file_content = contents.pop(0)
+                        if file_content.type == "dir":
+                            contents.extend(repo.get_contents(file_content.path, ref=branch))
+                        elif file_content.name.endswith(('.md', '.rs', '.js', '.ts', '.py', '.yaml', '.json')):
+                            if file_content.decoded_content is None:
+                                print(f"Warning: No content found for {file_content.path} in {repo_name}. Skipping this file.")
+                                continue
+                            try:
+                                # Try UTF-8 encoding first
+                                repo_data[file_content.path] = file_content.decoded_content.decode('utf-8')
+                            except UnicodeDecodeError:
+                                try:
+                                    # If UTF-8 fails, try ISO-8859-1 encoding
+                                    repo_data[file_content.path] = file_content.decoded_content.decode('iso-8859-1')
+                                except UnicodeDecodeError:
+                                    print(f"Warning: Unable to decode {file_content.path} in {repo_name}. Skipping this file.")
+                    print(f"Fetched data from {repo_name} using {branch} branch")
+                    return repo_data
+                except Exception as e:
+                    if "No commit found for the ref" in str(e):
+                        continue
+                    else:
+                        raise e
+            
+            print(f"Warning: No valid branch found for {repo_name}")
+            return {}
+        except Exception as e:
+            if "403" in str(e) and attempt < max_retries - 1:
+                delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
+                print(f"Encountered 403 error for {repo_name}. Retrying in {delay:.2f} seconds...")
+                time.sleep(delay)
+            else:
+                print(f"Failed to fetch data from {repo_name}: {str(e)}")
+                return {}
+    
+    print(f"Max retries reached for {repo_name}. Skipping this repository.")
+    return {}
 
 def fetch_article_content(url):
     """Fetch content from a web page."""
@@ -148,8 +172,18 @@ def create_fine_tuning_data(repo_data, article_data):
         refined_prompt, refined_completion = gpt4_refine(prompt, completion)
         fine_tuning_data.append({"messages": [{"role": "user", "content": refined_prompt}, {"role": "assistant", "content": refined_completion}]})
     
+    # Add a step to validate and clean the data
+    fine_tuning_data = validate_and_clean_data(fine_tuning_data)
+    
     print(f"Fine-tuning data creation complete. Total examples: {len(fine_tuning_data)}")
     return fine_tuning_data
+
+def validate_and_clean_data(data):
+    cleaned_data = []
+    for item in data:
+        if len(item['messages']) == 2 and all(key in item['messages'][0] for key in ['role', 'content']) and all(key in item['messages'][1] for key in ['role', 'content']):
+            cleaned_data.append(item)
+    return cleaned_data
 
 def save_as_jsonl(data, output_file="near_finetune_data.jsonl"):
     """Save data to a JSONL file."""
@@ -167,36 +201,66 @@ def upload_training_file(file_path):
         response = openai.File.create(file=file, purpose='fine-tune')
     return response.id
 
-def create_fine_tune_job(training_file_id):
-    """Create a fine-tuning job."""
-    print(f"Creating fine-tuning job with file ID: {training_file_id}")
-    response = openai.FineTuningJob.create(
-        training_file=training_file_id,
-        model="gpt-4o-2024-08-06", 
-        hyperparameters={
-            "n_epochs": 3,
-        }
-    )
-    return response.id
+def create_fine_tune_job(training_file_id, max_retries=3):
+    for attempt in range(max_retries):
+        try:
+            response = openai.FineTuningJob.create(
+                training_file=training_file_id,
+                model="gpt-4o-2024-08-06", 
+                hyperparameters={
+                    "n_epochs": 3,
+                }
+            )
+            return response.id
+        except openai.error.OpenAIError as e:
+            if attempt == max_retries - 1:
+                raise
+            print(f"Error creating fine-tune job: {e}. Retrying...")
+            time.sleep(5 * (attempt + 1))
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def monitor_fine_tune_job(job_id):
     """Monitor the status of the fine-tuning job."""
     print(f"Monitoring fine-tuning job: {job_id}")
     while True:
         job = openai.FineTuningJob.retrieve(job_id)
-        print(f"Fine-tuning status: {job.status}")
+        logging.info(f"Fine-tuning status: {job.status}")
         if job.status == "succeeded":
-            print(f"Fine-tuning complete! Fine-tuned model ID: {job.fine_tuned_model}")
-            print("You can now use this model ID to make requests to your fine-tuned model.")
+            logging.info(f"Fine-tuning complete! Fine-tuned model ID: {job.fine_tuned_model}")
+            logging.info("You can now use this model ID to make requests to your fine-tuned model.")
             return job.fine_tuned_model
         elif job.status == "failed":
-            print("Fine-tuning job failed. Please check the OpenAI dashboard for more details.")
+            logging.error("Fine-tuning job failed. Please check the OpenAI dashboard for more details.")
             return None
         time.sleep(60)  # Check status every minute
 
+def check_rate_limit():
+    rate_limit = github_client.get_rate_limit()
+    core_rate = rate_limit.core
+    print(f"GitHub API Rate Limit: {core_rate.remaining}/{core_rate.limit}")
+    if core_rate.remaining < 100:
+        reset_time = core_rate.reset.replace(tzinfo=None) - datetime.datetime.now()
+        print(f"Warning: Low on API calls. Resets in {reset_time}")
+
+def num_tokens_from_messages(messages, model="gpt-4o-2024-08-06"):
+    encoding = tiktoken.encoding_for_model(model)
+    num_tokens = 0
+    for message in messages:
+        num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+        for key, value in message.items():
+            num_tokens += len(encoding.encode(value))
+            if key == "name":  # if there's a name, the role is omitted
+                num_tokens -= 1  # role is always required and always 1 token
+    num_tokens += 2  # every reply is primed with <im_start>assistant
+    return num_tokens
+
 # Main execution
 if __name__ == "__main__":
-    print("Starting NEAR Protocol fine-tuning data preparation...")
+    print("Starting NEAR fine-tuning data preparation...")
+
+    # Check GitHub API rate limit
+    check_rate_limit()
 
     # Fetch data from all repositories
     print("Fetching data from repositories...")
