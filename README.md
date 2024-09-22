@@ -2,7 +2,7 @@
 
 ## Description
 
-We're building a fine-tuned language model that's deeply versed in the NEAR ecosystem, designed specifically for developers like you.
+We're open sourcing a fine-tuned language model that's deeply versed in the NEAR ecosystem, designed specifically for developers like you.
 
 Key features:
 
