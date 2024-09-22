@@ -2,6 +2,9 @@ import logging
 import os
 import time
 import openai
+from openai import OpenAI
+
+client = OpenAI()
 from fine_tuning.utils import error_handler
 
 class FineTuner:
@@ -25,13 +28,11 @@ class FineTuner:
         # Attempt to upload the file
         try:
             with open(file_path, 'rb') as f:
-                response = openai.File.create(
-                    file=f,
-                    purpose='fine-tune'
-                )
-            file_id = response['id']
+                response = client.files.create(file=f,
+                purpose='fine-tune')
+            file_id = response.id
             logging.info(f"Training file uploaded successfully. File ID: {file_id}")
-        except openai.error.OpenAIError as e:
+        except openai.OpenAIError as e:
             logging.error(f"Failed to upload training file: {e}")
             raise
 
@@ -41,8 +42,8 @@ class FineTuner:
         elapsed_time = 0
 
         while elapsed_time < max_wait_time:
-            file_info = openai.File.retrieve(file_id)
-            status = file_info['status']
+            file_info = client.files.retrieve(file_id)
+            status = file_info.status
             if status == 'processed':
                 logging.info(f"Training file {file_id} is processed and ready.")
                 return file_id
@@ -62,9 +63,9 @@ class FineTuner:
         logging.info("Creating fine-tuning job...")
 
         # Validate that the training_file_id is valid and processed
-        file_info = openai.File.retrieve(training_file_id)
-        if file_info['status'] != 'processed':
-            raise ValueError(f"Training file {training_file_id} is not ready. Status: {file_info['status']}")
+        file_info = client.files.retrieve(training_file_id)
+        if file_info.status != 'processed':
+            raise ValueError(f"Training file {training_file_id} is not ready. Status: {file_info.status}")
 
         # Check if the model is available for fine-tuning
         allowed_models = ["gpt-4o-mini-2024-07-18", "gpt-4o-2024-08-06"]
@@ -74,18 +75,16 @@ class FineTuner:
 
         # Create the fine-tuning job
         try:
-            response = openai.FineTuningJob.create(
-                training_file=training_file_id,
-                model=model,
-                n_epochs=self.config['fine_tuning']['n_epochs'],
-                learning_rate_multiplier=self.config['fine_tuning']['learning_rate_multiplier'],
-                prompt_loss_weight=self.config['fine_tuning']['prompt_loss_weight'],
-                suffix=self.config['fine_tuning'].get('suffix', '')
-            )
-            job_id = response['id']
+            response = client.fine_tuning.create(training_file=training_file_id,
+            model=model,
+            n_epochs=self.config['fine_tuning']['n_epochs'],
+            learning_rate_multiplier=self.config['fine_tuning']['learning_rate_multiplier'],
+            prompt_loss_weight=self.config['fine_tuning']['prompt_loss_weight'],
+            suffix=self.config['fine_tuning'].get('suffix', ''))
+            job_id = response.id
             logging.info(f"Fine-tuning job created successfully. Job ID: {job_id}")
             return job_id
-        except openai.error.OpenAIError as e:
+        except openai.OpenAIError as e:
             logging.error(f"Failed to create fine-tuning job: {e}")
             raise
 
@@ -95,11 +94,11 @@ class FineTuner:
         logging.info(f"Monitoring fine-tuning job: {job_id}")
         while True:
             try:
-                response = openai.FineTuningJob.retrieve(job_id)
-                status = response['status']
+                response = client.fine_tuning.retrieve(job_id)
+                status = response.status
                 logging.info(f"Job status: {status}")
                 if status == 'succeeded':
-                    model_id = response['fine_tuned_model']
+                    model_id = response.fine_tuned_model
                     logging.info(f"Fine-tuning succeeded. Fine-tuned model ID: {model_id}")
                     return model_id
                 elif status in ['failed', 'cancelled']:
@@ -108,6 +107,6 @@ class FineTuner:
                     return None
                 else:
                     time.sleep(self.config['fine_tuning'].get('monitoring_interval', 60))
-            except openai.error.OpenAIError as e:
+            except openai.OpenAIError as e:
                 logging.error(f"Error while checking fine-tuning job status: {e}")
                 time.sleep(self.config['fine_tuning'].get('monitoring_interval', 60))

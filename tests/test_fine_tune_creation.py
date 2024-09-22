@@ -10,8 +10,8 @@ class TestFineTuneCreation(unittest.TestCase):
         self.fine_tuner = FineTuner(self.config)
         self.training_file_id = 'file-abc123'
 
-    @patch('openai.File.retrieve')
-    @patch('openai.FineTune.create')
+    @patch('openai.resources.Files.retrieve')
+    @patch('openai.resources.FineTunes.create')
     def test_create_fine_tune_job(self, mock_fine_tune_create, mock_file_retrieve):
         # Mock the file retrieve response to indicate 'processed'
         mock_file_retrieve.return_value = {'id': self.training_file_id, 'status': 'processed'}
@@ -30,7 +30,7 @@ class TestFineTuneCreation(unittest.TestCase):
         # Assert that OpenAI File.retrieve was called to check file status
         mock_file_retrieve.assert_called_once_with(self.training_file_id)
 
-    @patch('openai.File.retrieve')
+    @patch('openai.resources.Files.retrieve')
     def test_create_fine_tune_job_with_unprocessed_file(self, mock_file_retrieve):
         # Mock the file retrieve response to indicate file is not processed yet
         mock_file_retrieve.return_value = {'id': self.training_file_id, 'status': 'uploaded'}

@@ -11,7 +11,7 @@ class TestJobMonitoring(unittest.TestCase):
         self.job_id = 'ft-job-123'
 
     @patch('time.sleep', return_value=None)
-    @patch('openai.FineTune.retrieve')
+    @patch('openai.resources.FineTunes.retrieve')
     def test_monitor_fine_tune_job_success(self, mock_fine_tune_retrieve, mock_sleep):
         # Mock the sequence of status responses
         mock_fine_tune_retrieve.side_effect = [
@@ -26,7 +26,7 @@ class TestJobMonitoring(unittest.TestCase):
         self.assertEqual(model_id, 'ft-model-abc123')
 
     @patch('time.sleep', return_value=None)
-    @patch('openai.FineTune.retrieve')
+    @patch('openai.resources.FineTunes.retrieve')
     def test_monitor_fine_tune_job_failure(self, mock_fine_tune_retrieve, mock_sleep):
         # Mock the sequence to immediately return a failed status
         mock_fine_tune_retrieve.return_value = {'id': self.job_id, 'status': 'failed', 'status_details': 'An error occurred'}
@@ -37,7 +37,7 @@ class TestJobMonitoring(unittest.TestCase):
         self.assertIsNone(model_id)
 
     @patch('time.sleep', return_value=None)
-    @patch('openai.FineTune.retrieve')
+    @patch('openai.resources.FineTunes.retrieve')
     def test_monitor_fine_tune_job_cancelled(self, mock_fine_tune_retrieve, mock_sleep):
         # Mock the sequence to return a cancelled status
         mock_fine_tune_retrieve.return_value = {'id': self.job_id, 'status': 'cancelled'}

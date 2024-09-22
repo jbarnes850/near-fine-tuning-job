@@ -1,5 +1,6 @@
 import os
-import openai
+from openai import OpenAI
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 from github import Github
 from dotenv import load_dotenv
 from fine_tuning.utils import error_handler
@@ -21,14 +22,13 @@ def initialize_openai():
     openai_api_key = os.getenv("OPENAI_API_KEY")
     if not openai_api_key:
         raise ValueError("OPENAI_API_KEY is not set in the environment variables.")
-    openai.api_key = openai_api_key
     logging.info("OpenAI client initialized.")
 
 @error_handler
 def validate_openai_api_key():
     """Validate the OpenAI API key by making a test API call."""
     try:
-        openai.Model.list()
+        client.models.list()
     except Exception as e:
         raise ValueError(f"Invalid OpenAI API key: {str(e)}")
     else:

@@ -10,8 +10,8 @@ class TestFileUpload(unittest.TestCase):
         self.fine_tuner = FineTuner(self.config)
         self.test_file_path = 'fine_tuning_data.jsonl'
 
-    @patch('openai.File.create')
-    @patch('openai.File.retrieve')
+    @patch('openai.resources.Files.create')
+    @patch('openai.resources.Files.retrieve')
     def test_upload_training_file(self, mock_file_retrieve, mock_file_create):
         # Mock the file upload response
         mock_file_create.return_value = {'id': 'file-abc123', 'object': 'file'}
@@ -29,12 +29,12 @@ class TestFileUpload(unittest.TestCase):
         # Assert that OpenAI File.retrieve was called to check status
         mock_file_retrieve.assert_called()
 
-    @patch('openai.File.create')
+    @patch('openai.resources.Files.create')
     def test_upload_training_file_failure(self, mock_file_create):
         # Mock the file upload to raise an OpenAIError
-        mock_file_create.side_effect = openai.error.OpenAIError('Upload failed')
+        mock_file_create.side_effect = openai.OpenAIError('Upload failed')
 
-        with self.assertRaises(openai.error.OpenAIError):
+        with self.assertRaises(openai.OpenAIError):
             self.fine_tuner.upload_training_file(self.test_file_path)
 
 if __name__ == '__main__':
