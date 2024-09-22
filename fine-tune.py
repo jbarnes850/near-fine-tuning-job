@@ -162,14 +162,40 @@ def fetch_all_repo_data(repos):
                 print(f'{repo} generated an exception: {exc}')
     return all_repo_data
 
+def get_cached_article_data(url):
+    cache_file = os.path.join(CACHE_DIR, f"article_{url.replace('/', '_').replace(':', '_')}.pkl")
+    if os.path.exists(cache_file):
+        with open(cache_file, 'rb') as f:
+            cached_data = pickle.load(f)
+        if datetime.now() - cached_data['timestamp'] < timedelta(days=CACHE_EXPIRY_DAYS):
+            return cached_data['data']
+    return None
+
+def save_cached_article_data(url, data):
+    if not os.path.exists(CACHE_DIR):
+        os.makedirs(CACHE_DIR)
+    cache_file = os.path.join(CACHE_DIR, f"article_{url.replace('/', '_').replace(':', '_')}.pkl")
+    with open(cache_file, 'wb') as f:
+        pickle.dump({'timestamp': datetime.now(), 'data': data}, f)
+
 @error_handler
 def fetch_article_content(url):
     """Fetch content from a web page."""
     print(f"Fetching content from article: {url}")
+    cached_data = get_cached_article_data(url)
+    if cached_data:
+        print(f"Using cached data for {url}")
+        return cached_data
+
     response = requests.get(url)
     soup = BeautifulSoup(response.content, 'html.parser')
     content = soup.find('main') or soup.find('article') or soup.find('body')
-    return content.get_text() if content else ""
+    article_content = content.get_text() if content else ""
+    
+    if article_content:
+        save_cached_article_data(url, article_content)
+    
+    return article_content
 
 def fetch_article_data(articles):
     article_data = {}
@@ -270,37 +296,66 @@ def split_content(content, max_length=1000):
     
     return chunks
 
-def create_fine_tuning_data(repo_data, article_data):
+def create_fine_tuning_data(repo_data, article_data, target_examples=10000, max_tokens=4000000):
     """Create fine-tuning data in the required format."""
     print("Creating fine-tuning data...")
     fine_tuning_data = []
+    total_tokens = 0
+    
+    # Combine repo and article data
+    all_data = list(repo_data.items()) + list(article_data.items())
+    random.shuffle(all_data)  # Shuffle to ensure diversity
 
-    # Process repository data
-    for repo_name, files in repo_data.items():
-        print(f"Processing data from repository: {repo_name}")
-        for file_path, content in files.items():
+    with tqdm(total=target_examples, desc="Generating examples") as pbar:
+        for source, content in all_data:
+            if len(fine_tuning_data) >= target_examples:
+                break
+            
             content_chunks = split_content(content)
             for chunk in content_chunks:
-                prompts = generate_diverse_prompts(file_path, chunk, repo_name)
+                if "repo" in source:
+                    prompts = generate_diverse_prompts(source, chunk, source.split('/')[0])
+                else:
+                    prompts = generate_article_prompts(source, chunk)
+                
                 for prompt, completion in prompts:
+                    if len(fine_tuning_data) >= target_examples:
+                        break
+                    
                     refined_prompt, refined_completion = openai_api_call("refine", prompt=prompt, completion=completion)
-                    fine_tuning_data.append({"messages": [{"role": "user", "content": refined_prompt}, {"role": "assistant", "content": refined_completion}]})
+                    example = {"messages": [{"role": "user", "content": refined_prompt}, {"role": "assistant", "content": refined_completion}]}
+                    example_tokens = num_tokens_from_messages(example['messages'])
+                    
+                    if total_tokens + example_tokens > max_tokens:
+                        break
+                    
+                    fine_tuning_data.append(example)
+                    total_tokens += example_tokens
+                    pbar.update(1)
+                
+                if len(fine_tuning_data) >= target_examples or total_tokens >= max_tokens:
+                    break
+            
+            if len(fine_tuning_data) >= target_examples or total_tokens >= max_tokens:
+                break
 
-    # Process article data
-    for url, content in article_data.items():
-        print(f"Processing article: {url}")
-        content_chunks = split_content(content)
-        for chunk in content_chunks:
-            prompts = generate_article_prompts(url, chunk)
-            for prompt, completion in prompts:
-                refined_prompt, refined_completion = openai_api_call("refine", prompt=prompt, completion=completion)
-                fine_tuning_data.append({"messages": [{"role": "user", "content": refined_prompt}, {"role": "assistant", "content": refined_completion}]})
-
-    # Add a step to validate and clean the data
-    fine_tuning_data = validate_and_clean_data(fine_tuning_data)
+    # Implement content-based filtering
+    fine_tuning_data = content_based_filtering(fine_tuning_data)
 
     print(f"Fine-tuning data creation complete. Total examples: {len(fine_tuning_data)}")
+    print(f"Total tokens: {total_tokens}")
     return fine_tuning_data
+
+def content_based_filtering(data, top_n=5000):
+    """Filter the most relevant examples based on NEAR-specific keywords."""
+    near_keywords = ['NEAR Protocol', 'sharding', 'blockchain', 'smart contract', 'token', 'staking', 'validator', 'transaction', 'gas fee', 'Aurora', 'NEAR Wallet', 'NEAR CLI', 'NEAR SDK', 'NEAR API']
+    
+    def relevance_score(example):
+        content = example['messages'][0]['content'] + ' ' + example['messages'][1]['content']
+        return sum(content.lower().count(keyword.lower()) for keyword in near_keywords)
+    
+    sorted_data = sorted(data, key=relevance_score, reverse=True)
+    return sorted_data[:top_n]
 
 def validate_and_clean_data(data):
     """Validate and clean the fine-tuning data."""
@@ -446,7 +501,10 @@ if __name__ == "__main__":
         print(f"Article data fetched. Total articles processed: {len(article_data)}")
 
         # Create fine-tuning data and save to JSONL
-        fine_tuning_data = create_fine_tuning_data(all_repo_data, article_data)
+        target_examples = 10000  # Adjust based on your needs
+        max_tokens = 4000000  # Adjust based on your budget
+
+        fine_tuning_data = create_fine_tuning_data(all_repo_data, article_data, target_examples, max_tokens)
         print(f"Number of examples generated: {len(fine_tuning_data)}")
         total_tokens = estimate_total_tokens(fine_tuning_data)
         estimated_cost = estimate_fine_tuning_cost(total_tokens)
