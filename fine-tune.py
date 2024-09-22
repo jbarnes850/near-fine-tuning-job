@@ -3,7 +3,6 @@ from openai import OpenAI
 import os
 import json
 import time
-import random
 import requests
 from bs4 import BeautifulSoup
 from github import Github
@@ -14,6 +13,7 @@ from functools import wraps
 import concurrent.futures
 import pickle
 from datetime import datetime, timedelta
+from tqdm import tqdm
 
 # Load environment variables
 load_dotenv()
@@ -164,6 +164,7 @@ def fetch_article_content(url):
 @error_handler
 def openai_api_call(mode, **kwargs):
     """Unified function for OpenAI API calls."""
+    time.sleep(1)  # Add a small delay to avoid rate limiting
     if mode == "refine":
         response = client.chat.completions.create(
             model="gpt-4o-2024-08-06",
@@ -287,7 +288,9 @@ def validate_and_clean_data(data):
     """Validate and clean the fine-tuning data."""
     return [item for item in data if len(item['messages']) == 2 and 
             all(key in item['messages'][0] for key in ['role', 'content']) and 
-            all(key in item['messages'][1] for key in ['role', 'content'])]
+            all(key in item['messages'][1] for key in ['role', 'content']) and
+            len(item['messages'][0]['content']) >= 10 and  # Ensure minimum content length
+            len(item['messages'][1]['content']) >= 20]
 
 @error_handler
 def save_as_jsonl(data, output_file="near_finetune_data.jsonl"):
@@ -312,17 +315,26 @@ def create_fine_tune_job(training_file_id):
     return openai_api_call("fine_tune", training_file=training_file_id, model="gpt-4o-2024-08-06", hyperparameters={"n_epochs": 3})
 
 def monitor_fine_tune_job(job_id):
-    """Monitor the status of the fine-tuning job."""
+    """Monitor the status of the fine-tuning job with a progress bar."""
     print(f"Monitoring fine-tuning job: {job_id}")
+    pbar = tqdm(total=100, desc="Fine-tuning progress", unit="%")
+    last_progress = 0
     while True:
         job = openai_api_call("retrieve", job_id=job_id)
         logging.info(f"Fine-tuning status: {job.status}")
         if job.status == "succeeded":
+            pbar.update(100 - last_progress)
+            pbar.close()
             logging.info(f"Fine-tuning complete! Fine-tuned model ID: {job.fine_tuned_model}")
             return job.fine_tuned_model
         elif job.status == "failed":
+            pbar.close()
             logging.error("Fine-tuning job failed. Please check the OpenAI dashboard for more details.")
             return None
+        elif hasattr(job, 'fine_tuned_model') and job.fine_tuned_model is not None:
+            current_progress = min(job.trained_tokens / job.trained_tokens_n * 100, 99)
+            pbar.update(current_progress - last_progress)
+            last_progress = current_progress
         time.sleep(60)  # Check status every minute
 
 def check_rate_limit():
@@ -345,52 +357,70 @@ def num_tokens_from_messages(messages, model="gpt-4o-2024-08-06"):
                 num_tokens -= 1  # role is always required and always 1 token
     return num_tokens
 
+def estimate_total_tokens(fine_tuning_data):
+    """Estimate the total number of tokens in the fine-tuning data."""
+    total_tokens = sum(num_tokens_from_messages(item['messages']) for item in fine_tuning_data)
+    print(f"Estimated total tokens: {total_tokens}")
+    return total_tokens
+
 # Main execution
 if __name__ == "__main__":
-    print("Starting NEAR fine-tuning data preparation...")
+    try:
+        print("Starting NEAR fine-tuning data preparation...")
 
-    # Check GitHub API rate limit
-    check_rate_limit()
+        # Check GitHub API rate limit
+        check_rate_limit()
 
-    # Fetch data from all repositories
-    print("Fetching data from repositories...")
-    all_repo_data = fetch_all_repo_data(repos)
-    print(f"Repository data fetched. Total repositories processed: {len(all_repo_data)}")
+        # Fetch data from all repositories
+        print("Fetching data from repositories...")
+        all_repo_data = fetch_all_repo_data(repos)
+        print(f"Repository data fetched. Total repositories processed: {len(all_repo_data)}")
 
-    # Fetch data from articles
-    print("Fetching data from articles...")
-    article_data = {article: fetch_article_content(article) for article in articles if fetch_article_content(article)}
-    print(f"Article data fetched. Total articles processed: {len(article_data)}")
+        # Fetch data from articles
+        print("Fetching data from articles...")
+        article_data = {article: fetch_article_content(article) for article in articles if fetch_article_content(article)}
+        print(f"Article data fetched. Total articles processed: {len(article_data)}")
 
-    # Create fine-tuning data and save to JSONL
-    fine_tuning_data = create_fine_tuning_data(all_repo_data, article_data)
-    print(f"Number of examples generated: {len(fine_tuning_data)}")
+        # Create fine-tuning data and save to JSONL
+        fine_tuning_data = create_fine_tuning_data(all_repo_data, article_data)
+        print(f"Number of examples generated: {len(fine_tuning_data)}")
+        estimate_total_tokens(fine_tuning_data)
 
-    if not fine_tuning_data:
-        print("No data generated. Exiting.")
-        exit()
+        if not fine_tuning_data:
+            print("No data generated. Exiting.")
+            exit()
 
-    jsonl_file = "near_finetune_data.jsonl"
-    save_as_jsonl(fine_tuning_data, jsonl_file)
+        jsonl_file = "near_finetune_data.jsonl"
+        save_as_jsonl(fine_tuning_data, jsonl_file)
 
-    # Upload training file
-    print("Uploading training file to OpenAI...")
-    training_file_id = upload_training_file(jsonl_file)
-    print(f"Training file uploaded. File ID: {training_file_id}")
+        # After saving the JSONL file
+        print(f"Fine-tuning data saved to {jsonl_file}")
+        confirmation = input("Do you want to proceed with the fine-tuning job? (y/n): ")
+        if confirmation.lower() != 'y':
+            print("Fine-tuning job cancelled.")
+            exit()
 
-    # Create and monitor fine-tuning job
-    print("Creating fine-tuning job...")
-    job_id = create_fine_tune_job(training_file_id)
-    print(f"Fine-tuning job created. Job ID: {job_id}")
+        # Upload training file
+        print("Uploading training file to OpenAI...")
+        training_file_id = upload_training_file(jsonl_file)
+        print(f"Training file uploaded. File ID: {training_file_id}")
 
-    print("Starting job monitoring...")
-    fine_tuned_model_id = monitor_fine_tune_job(job_id)
+        # Create and monitor fine-tuning job
+        print("Creating fine-tuning job...")
+        job_id = create_fine_tune_job(training_file_id)
+        print(f"Fine-tuning job created. Job ID: {job_id}")
 
-    if fine_tuned_model_id:
-        print(f"\nFine-tuning process complete.")
-        print(f"Your fine-tuned model ID is: {fine_tuned_model_id}")
-        print("You can use this model by specifying this ID when making OpenAI API requests.")
-        print("Example usage:")
-        print(f"response = client.chat.completions.create(model='{fine_tuned_model_id}', messages=[...])")
-    else:
-        print("\nFine-tuning process failed. Please check the OpenAI dashboard for more information.")
+        print("Starting job monitoring...")
+        fine_tuned_model_id = monitor_fine_tune_job(job_id)
+
+        if fine_tuned_model_id:
+            print(f"\nFine-tuning process complete.")
+            print(f"Your fine-tuned model ID is: {fine_tuned_model_id}")
+            print("You can use this model by specifying this ID when making OpenAI API requests.")
+            print("Example usage:")
+            print(f"response = client.chat.completions.create(model='{fine_tuned_model_id}', messages=[...])")
+        else:
+            print("\nFine-tuning process failed. Please check the OpenAI dashboard for more information.")
+    except Exception as e:
+        logging.error(f"An unexpected error occurred: {str(e)}")
+        print("An error occurred during execution. Please check the logs for details.")
