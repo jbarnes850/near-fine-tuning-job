@@ -6,6 +6,9 @@ We're open sourcing a fine-tuned language model that's deeply versed in the NEAR
 
 - Incorporates up-to-date data from NEAR repositories and ecosystem updates
 - Optimized for understanding and generating NEAR-related code and content
+- Uses content splitting for better processing of large documents
+- Generates diverse prompts for both repository files and articles
+- Implements error handling and retry mechanism for robust data collection
 - Perfect for powering chatbots, training datasets, and AI agents
 
 We're excited to see how you'll use this model to build the next generation of NEAR-powered AI applications. Join us in refining and expanding this tool – your contributions will help shape the future of AI in the NEAR ecosystem!
@@ -65,8 +68,8 @@ To use the NEAR Ecosystem Fine-Tuned Model, follow these steps:
    ```
 
    This script will:
-   - Fetch data from specified NEAR Protocol repositories and articles
-   - Process and refine the data using GPT-4
+   - Fetch data from specified NEAR repositories and articles
+   - Process and refine the data using GPT-4o
    - Create a JSONL file with the training data
    - Upload the training file to OpenAI
    - Start a fine-tuning job
@@ -77,17 +80,17 @@ To use the NEAR Ecosystem Fine-Tuned Model, follow these steps:
 4. To use the fine-tuned model in your applications, use the OpenAI API with the provided model ID:
 
    ```python
-   import openai
+   from openai import OpenAI
 
-   openai.api_key = 'your_api_key'
-   response = openai.ChatCompletion.create(
+   client = OpenAI(api_key='your_api_key')
+   response = client.chat.completions.create(
        model='your_fine_tuned_model_id',
        messages=[
            {"role": "system", "content": "You are a NEAR Protocol expert."},
            {"role": "user", "content": "Explain NEAR's sharding mechanism."}
        ]
    )
-   print(response.choices[0].message['content'])
+   print(response.choices[0].message.content)
    ```
 
 ## Data Sources
@@ -118,7 +121,8 @@ The fine-tuning process consists of several steps:
    - Retrieves content from selected web articles
 
 2. Data Processing:
-   - Extracts relevant information from the collected data
+   - Splits content into manageable chunks
+   - Generates diverse prompts for both repository files and articles
    - Uses GPT-4 to refine prompts and completions for each data point
 
 3. Training Data Creation:
