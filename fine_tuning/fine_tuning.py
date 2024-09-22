@@ -1,16 +1,23 @@
 import logging
 import os
 import time
-import openai
 from openai import OpenAI
+import openai
 
-client = OpenAI()
-from fine_tuning.utils import error_handler
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 class FineTuner:
     def __init__(self, config):
         self.config = config
+        from fine_tuning.utils import error_handler  # Move import here
+        self.error_handler = error_handler
 
+    @property
+    def error_handler(self):
+        from fine_tuning.utils import error_handler
+        return error_handler
+
+    # Use self.error_handler instead of error_handler in your methods
     @error_handler
     def upload_training_file(self, file_path):
         """Upload the training file to OpenAI with validation."""
@@ -75,7 +82,7 @@ class FineTuner:
 
         # Create the fine-tuning job
         try:
-            response = client.fine_tuning.create(training_file=training_file_id,
+            response = openai.FineTuning.create(training_file=training_file_id,
             model=model,
             n_epochs=self.config['fine_tuning']['n_epochs'],
             learning_rate_multiplier=self.config['fine_tuning']['learning_rate_multiplier'],
@@ -94,7 +101,7 @@ class FineTuner:
         logging.info(f"Monitoring fine-tuning job: {job_id}")
         while True:
             try:
-                response = client.fine_tuning.retrieve(job_id)
+                response = openai.FineTuning.retrieve(job_id)
                 status = response.status
                 logging.info(f"Job status: {status}")
                 if status == 'succeeded':
