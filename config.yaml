@@ -1,0 +1,145 @@
+# GitHub Configuration
+github:
+  repos:
+    - "near/docs"
+    - "near/neps"
+    - "near/node-docs"
+    - "near-examples/near-multichain"
+    - "near/create-near-app"
+    - "near/near-cli"
+    - "near/near-cli-rs"
+    - "near/wallet-selector"
+    - "near/fast-auth-signer"
+    - "near/mpc"
+    - "near/near-api-js"
+    - "fastnear/fastnear-api-server-rs"
+    - "near/near-sdk-js"
+    - "near/near-sdk-rs"
+    - "near/near-workspaces-js"
+    - "near/near-workspaces-rs"
+    - "near/near-lake-indexer"
+    - "Mintbase/near-ca"
+    - "Mintbase/make-agent"
+  max_workers: 10
+
+# Article URLs
+articles:
+  - "https://near.org/blog/near-protocol-economics/"
+  - "https://pages.near.org/blog/nightshade-2-launches-on-near-mainnet-introducing-stateless-validation/"
+  - "https://pages.near.org/papers/the-official-near-white-paper/"
+  - "https://discovery-domain.org/papers/nightshade.pdf"
+  - "https://pages.near.org/blog/user-owned-ai-is-near/",
+  - "https://pages.near.org/blog/near-foundation-and-delphi-labs-partner-on-ai-x-web3-accelerator/"
+  - "https://pages.near.org/blog/near-one-shares-q3-near-protocol-roadmap-update/"
+  - "https://pages.near.org/blog/ecosystem-update-announcing-near-one-chain-abstraction-spinouts/"
+  - "https://pages.near.org/blog/chain-signatures-mainnet-launches/"
+  - "https://pages.near.org/blog/getting-started-with-chain-signatures/"
+  - "https://docs.near.ai/"
+  - "https://wiki.near.org/development/tools-infrastructure"
+  - "https://wiki.near.org/development/best-practices"
+  - "https://docs.near.org/tutorials/auction/introduction"
+  - "https://pages.near.org/blog/near-foundation-launches-ai-incubation-program/"
+  - "https://near.org/blog/near-releases-nightshade-sharding-roadmap/"
+  - "https://near.org/blog/understanding-nears-nightshade-sharding-design/"
+  - "https://near.org/blog/near-mainnet-phase-1-launched/"
+  - "https://near.org/blog/near-launches-eth-near-rainbow-bridge/"
+  - "https://near.org/blog/near-launches-usn-stablecoin/"
+
+# Caching Configuration
+cache:
+  dir: "cache"
+  expiry_days: 14
+
+# Fine-tuning Configuration
+fine_tuning:
+  model: "gpt-4o-2024-08-06"
+  n_epochs: 4
+  learning_rate_multiplier: 0.1
+  prompt_loss_weight: 0.01
+  target_examples: 500
+  max_tokens: 500000  # Adjust as needed
+  monitoring_interval: 60  # in seconds
+
+# OpenAI API Configuration
+openai:
+  model: "gpt-4o-mini-2024-07-18"
+  temperature: 0.7
+  max_tokens: 4000
+  top_p: 1
+  frequency_penalty: 0
+  presence_penalty: 0
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(levelname)s - %(message)s"
+  file: "fine_tuning.log"
+
+# Rate Limiting
+rate_limit:
+  min_calls: 100
+  sleep_time: 60
+
+# Data Processing
+data_processing:
+  max_content_length: 10000
+  min_content_length: 100
+  excluded_file_types: [".gitignore", ".md", ".txt"]
+
+# Example Generation
+example_generation:
+  prompt_templates:
+    - "Explain the concept of {topic} in NEAR Protocol."
+    - "How does {feature} work in NEAR, and how does it compare to other blockchains?"
+    - "What are the best practices for implementing {concept} in NEAR smart contracts?"
+    - "Describe the role of {component} in NEAR's architecture."
+    - "How can developers optimize {aspect} when building on NEAR?"
+
+# Model Evaluation
+evaluation:
+  test_set_size: 1000
+  metrics:
+    - "perplexity"
+    - "accuracy"
+    - "f1_score"
+
+# Deployment
+deployment:
+  model_name: "near-expert-{timestamp}"
+  deployment_environment: "production"
+  monitoring_interval: 3600  # in seconds
+
+# Security
+security:
+  encrypt_cached_data: true
+  encryption_key_env_var: "CACHE_ENCRYPTION_KEY"
+
+# Content Filtering
+content_filtering:
+  keywords:
+    - "NEAR Protocol"
+    - "sharding"
+    - "blockchain"
+    - "smart contract"
+    - "token"
+    - "staking"
+    - "validator"
+    - "transaction"
+    - "gas fee"
+    - "Aurora"
+    - "NEAR Wallet"
+    - "NEAR CLI"
+    - "NEAR SDK"
+    - "NEAR API"
+    - "Nightshade"
+    - "Rainbow Bridge"
+    - "NEAR Foundation"
+    - "Web3"
+    - "FastAuth"
+    - "MPC"
+    - "NEAR Lake"
+    - "Chain Abstraction"
+    - "Chain Signatures"
+    - "AI x Web3"
+    - "Agents"
+    - "User-owned AI"

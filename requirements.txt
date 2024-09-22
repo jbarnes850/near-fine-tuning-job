@@ -1,7 +1,8 @@
 openai
+PyGithub
 requests
 beautifulsoup4
-PyGithub
 python-dotenv
 tiktoken
+PyYAML
 tqdm
