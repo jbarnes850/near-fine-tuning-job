@@ -2,7 +2,7 @@
 
 We're open sourcing a fine-tuned language model that's deeply versed in the NEAR ecosystem, designed specifically for developers like you.
 
-Key features:
+## Key Features
 
 - Incorporates up-to-date data from NEAR repositories and ecosystem updates
 - Optimized for understanding and generating NEAR-related code and content
@@ -26,18 +26,18 @@ We're excited to see how you'll use this model to build the next generation of N
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/your-username/near-ecosystem-fine-tuned-model.git
-   cd near-ecosystem-fine-tuned-model
+   git clone https://github.com/jbarnes850/near-fine-tuned-model.git
+   cd near-fine-tuned-model
    ```
 
-2. Create a virtual environment:
+2. Set up a virtual environment:
 
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
    ```
 
-3. Install the required packages:
+3. Install dependencies:
 
    ```bash
    pip install -r requirements.txt
