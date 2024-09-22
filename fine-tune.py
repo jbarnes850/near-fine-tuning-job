@@ -142,7 +142,7 @@ def fetch_all_repo_data(repos):
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         future_to_repo = {executor.submit(fetch_repo_data, repo): repo for repo in repos}
         all_repo_data = {}
-        for future in concurrent.futures.as_completed(future_to_repo):
+        for future in tqdm(concurrent.futures.as_completed(future_to_repo), total=len(repos), desc="Fetching repository data"):
             repo = future_to_repo[future]
             try:
                 data = future.result()
@@ -160,6 +160,14 @@ def fetch_article_content(url):
     soup = BeautifulSoup(response.content, 'html.parser')
     content = soup.find('main') or soup.find('article') or soup.find('body')
     return content.get_text() if content else ""
+
+def fetch_article_data(articles):
+    article_data = {}
+    for article in tqdm(articles, desc="Fetching article data"):
+        content = fetch_article_content(article)
+        if content:
+            article_data[article] = content
+    return article_data
 
 @error_handler
 def openai_api_call(mode, **kwargs):
@@ -363,6 +371,12 @@ def estimate_total_tokens(fine_tuning_data):
     print(f"Estimated total tokens: {total_tokens}")
     return total_tokens
 
+def estimate_fine_tuning_cost(total_tokens):
+    # Assuming a rate of $0.03 per 1K tokens (this may vary, please check the latest pricing)
+    estimated_cost = (total_tokens / 1000) * 0.03
+    print(f"Estimated fine-tuning cost: ${estimated_cost:.2f}")
+    return estimated_cost
+
 # Main execution
 if __name__ == "__main__":
     try:
@@ -378,13 +392,14 @@ if __name__ == "__main__":
 
         # Fetch data from articles
         print("Fetching data from articles...")
-        article_data = {article: fetch_article_content(article) for article in articles if fetch_article_content(article)}
+        article_data = fetch_article_data(articles)
         print(f"Article data fetched. Total articles processed: {len(article_data)}")
 
         # Create fine-tuning data and save to JSONL
         fine_tuning_data = create_fine_tuning_data(all_repo_data, article_data)
         print(f"Number of examples generated: {len(fine_tuning_data)}")
-        estimate_total_tokens(fine_tuning_data)
+        total_tokens = estimate_total_tokens(fine_tuning_data)
+        estimated_cost = estimate_fine_tuning_cost(total_tokens)
 
         if not fine_tuning_data:
             print("No data generated. Exiting.")
@@ -395,7 +410,7 @@ if __name__ == "__main__":
 
         # After saving the JSONL file
         print(f"Fine-tuning data saved to {jsonl_file}")
-        confirmation = input("Do you want to proceed with the fine-tuning job? (y/n): ")
+        confirmation = input(f"The estimated cost of fine-tuning is ${estimated_cost:.2f}. Do you want to proceed? (y/n): ")
         if confirmation.lower() != 'y':
             print("Fine-tuning job cancelled.")
             exit()
