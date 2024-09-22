@@ -56,7 +56,6 @@ repos = [
     "near/near-lake-indexer",
     "Mintbase/near-ca",
     "Mintbase/make-agent",
-    "Mintbase/mintbase-js",
 ]
 
 # List of additional articles
