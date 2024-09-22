@@ -1,7 +1,7 @@
 import os
 import unittest
 import openai
-from config import load_config
+from fine_tuning.config import load_config
 
 class TestModelEvaluation(unittest.TestCase):
     def setUp(self):

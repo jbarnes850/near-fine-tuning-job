@@ -2,7 +2,7 @@ import logging
 import os
 import time
 import openai
-from utils import error_handler
+from fine_tuning.utils import error_handler
 
 class FineTuner:
     def __init__(self, config):
@@ -67,15 +67,14 @@ class FineTuner:
             raise ValueError(f"Training file {training_file_id} is not ready. Status: {file_info['status']}")
 
         # Check if the model is available for fine-tuning
-        # As of now, OpenAI allows fine-tuning on specific models
-        allowed_models = ["davinci", "curie", "babbage", "ada", "gpt-3.5-turbo"]
+        allowed_models = ["gpt-4o-mini-2024-07-18", "gpt-4o-2024-08-06"]
         model = self.config['fine_tuning']['model']
         if model not in allowed_models:
             raise ValueError(f"The model '{model}' is not available for fine-tuning. Allowed models: {allowed_models}")
 
         # Create the fine-tuning job
         try:
-            response = openai.FineTune.create(
+            response = openai.FineTuningJob.create(
                 training_file=training_file_id,
                 model=model,
                 n_epochs=self.config['fine_tuning']['n_epochs'],
@@ -94,26 +93,21 @@ class FineTuner:
     def monitor_fine_tune_job(self, job_id):
         """Monitor the fine-tuning job until completion."""
         logging.info(f"Monitoring fine-tuning job: {job_id}")
-        status = ''
-        while status not in ['succeeded', 'failed', 'cancelled']:
+        while True:
             try:
-                response = openai.FineTune.retrieve(id=job_id)
+                response = openai.FineTuningJob.retrieve(job_id)
                 status = response['status']
-                logging.info(f"Fine-tuning status: {status}")
+                logging.info(f"Job status: {status}")
                 if status == 'succeeded':
                     model_id = response['fine_tuned_model']
                     logging.info(f"Fine-tuning succeeded. Fine-tuned model ID: {model_id}")
                     return model_id
-                elif status == 'failed':
+                elif status in ['failed', 'cancelled']:
                     error_message = response.get('status_details', 'Unknown error')
-                    logging.error(f"Fine-tuning failed. Reason: {error_message}")
-                    return None
-                elif status == 'cancelled':
-                    logging.error("Fine-tuning was cancelled.")
+                    logging.error(f"Fine-tuning {status}. Reason: {error_message}")
                     return None
                 else:
                     time.sleep(self.config['fine_tuning'].get('monitoring_interval', 60))
             except openai.error.OpenAIError as e:
                 logging.error(f"Error while checking fine-tuning job status: {e}")
                 time.sleep(self.config['fine_tuning'].get('monitoring_interval', 60))
-        return None

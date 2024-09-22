@@ -1,6 +1,6 @@
 import os
 import logging
-from utils import error_handler, retry_on_exception
+from fine_tuning.utils import error_handler, retry_on_exception
 import requests
 from bs4 import BeautifulSoup
 import pickle

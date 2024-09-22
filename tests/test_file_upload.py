@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import openai
-from fine_tuning import FineTuner
-from config import load_config
+from fine_tuning.fine_tuning import FineTuner
+from fine_tuning.config import load_config
 
 class TestFileUpload(unittest.TestCase):
     def setUp(self):

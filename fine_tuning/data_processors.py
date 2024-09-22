@@ -1,5 +1,5 @@
 import logging
-from utils import error_handler, num_tokens_from_messages, split_list
+from fine_tuning.utils import error_handler, num_tokens_from_messages, split_list
 from tqdm import tqdm
 import random
 import json

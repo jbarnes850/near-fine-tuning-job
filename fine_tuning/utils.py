@@ -39,17 +39,16 @@ def num_tokens_from_string(string, encoding_name='cl100k_base'):
 
 def num_tokens_from_messages(messages, model="gpt-4o-2024-08-06"):
     """Returns the number of tokens used by a list of messages."""
-    encoding = tiktoken.encoding_for_model(model)
-    tokens_per_message = 3  # May vary depending on model
-    tokens_per_name = 1
+    try:
+        encoding = tiktoken.encoding_for_model(model)
+    except KeyError:
+        encoding = tiktoken.get_encoding("cl100k_base")
     num_tokens = 0
     for message in messages:
-        num_tokens += tokens_per_message
+        num_tokens += 4  # Each message requires 4 tokens
         for key, value in message.items():
             num_tokens += len(encoding.encode(value))
-            if key == "name":
-                num_tokens += tokens_per_name
-    num_tokens += 1  # For assistant's reply
+    num_tokens += 2  # For assistant's reply
     return num_tokens
 
 def split_list(lst, n):

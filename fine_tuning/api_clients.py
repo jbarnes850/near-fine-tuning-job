@@ -2,8 +2,10 @@ import os
 import openai
 from github import Github
 from dotenv import load_dotenv
-from utils import error_handler
+from fine_tuning.utils import error_handler
 import logging
+
+load_dotenv()
 
 def get_github_client():
     """Initialize and return a GitHub client."""

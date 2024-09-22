@@ -1,0 +1,39 @@
+github:
+  repos:
+    - "owner/repo1"
+    - "owner/repo2"
+
+articles:
+  urls:
+    - "https://example.com/article1"
+    - "https://example.com/article2"
+
+data_processing:
+  max_tokens: 2048
+
+fine_tuning:
+  model: "gpt-4o-2024-08-06"
+  n_epochs: 4
+  learning_rate_multiplier: 0.1
+  prompt_loss_weight: 0.01
+  target_examples: 500
+  max_tokens: 500000
+  monitoring_interval: 60
+  suffix: "NEAR_Ecosystem_Model"
+
+openai:
+  model: "gpt-4o-2024-08-06"
+  temperature: 0.7
+  max_tokens: 4000
+  top_p: 1.0
+  frequency_penalty: 0.0
+  presence_penalty: 0.0
+
+cache:
+  dir: "cache"
+  expiry_days: 7
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(levelname)s - %(message)s"
+  file: "fine_tuning.log"
