@@ -3,3 +3,4 @@ python-dotenv
 PyGithub
 requests
 beautifulsoup4
+tiktoken
