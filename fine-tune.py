@@ -11,6 +11,9 @@ from dotenv import load_dotenv
 import tiktoken
 import logging
 from functools import wraps
+import concurrent.futures
+import pickle
+from datetime import datetime, timedelta
 
 # Load environment variables
 load_dotenv()
@@ -66,6 +69,9 @@ articles = [
     "https://pages.near.org/blog/near-foundation-launches-ai-incubation-program/"
 ]
 
+CACHE_DIR = "repo_cache"
+CACHE_EXPIRY_DAYS = 7
+
 def error_handler(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -81,10 +87,32 @@ def error_handler(func):
                 time.sleep(5 * (attempt + 1))
     return wrapper
 
+def get_cached_data(repo_name):
+    cache_file = os.path.join(CACHE_DIR, f"{repo_name.replace('/', '_')}.pkl")
+    if os.path.exists(cache_file):
+        with open(cache_file, 'rb') as f:
+            cached_data = pickle.load(f)
+        if datetime.now() - cached_data['timestamp'] < timedelta(days=CACHE_EXPIRY_DAYS):
+            return cached_data['data']
+    return None
+
+def save_cached_data(repo_name, data):
+    if not os.path.exists(CACHE_DIR):
+        os.makedirs(CACHE_DIR)
+    cache_file = os.path.join(CACHE_DIR, f"{repo_name.replace('/', '_')}.pkl")
+    with open(cache_file, 'wb') as f:
+        pickle.dump({'timestamp': datetime.now(), 'data': data}, f)
+
 @error_handler
 def fetch_repo_data(repo_name):
     """Fetch content of markdown and code files from a repository."""
     print(f"Fetching data from repository: {repo_name}")
+    
+    cached_data = get_cached_data(repo_name)
+    if cached_data:
+        print(f"Using cached data for {repo_name}")
+        return cached_data
+
     repo = github_client.get_repo(repo_name)
     branches = ["main", "master"]
     repo_data = {}
@@ -102,12 +130,27 @@ def fetch_repo_data(repo_name):
                     except UnicodeDecodeError:
                         repo_data[file_content.path] = file_content.decoded_content.decode('iso-8859-1')
             print(f"Fetched data from {repo_name} using {branch} branch")
+            save_cached_data(repo_name, repo_data)
             return repo_data
         except Exception as e:
             if "No commit found for the ref" not in str(e):
                 raise e
     print(f"Warning: No valid branch found for {repo_name}")
     return {}
+
+def fetch_all_repo_data(repos):
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        future_to_repo = {executor.submit(fetch_repo_data, repo): repo for repo in repos}
+        all_repo_data = {}
+        for future in concurrent.futures.as_completed(future_to_repo):
+            repo = future_to_repo[future]
+            try:
+                data = future.result()
+                if data:
+                    all_repo_data[repo] = data
+            except Exception as exc:
+                print(f'{repo} generated an exception: {exc}')
+    return all_repo_data
 
 @error_handler
 def fetch_article_content(url):
@@ -311,7 +354,7 @@ if __name__ == "__main__":
 
     # Fetch data from all repositories
     print("Fetching data from repositories...")
-    all_repo_data = {repo: fetch_repo_data(repo) for repo in repos if fetch_repo_data(repo)}
+    all_repo_data = fetch_all_repo_data(repos)
     print(f"Repository data fetched. Total repositories processed: {len(all_repo_data)}")
 
     # Fetch data from articles
