@@ -57,7 +57,7 @@ To use the NEAR Ecosystem Fine-Tuned Model, follow these steps:
    This script will:
 
    - Fetch data from specified NEAR repositories and articles
-   - Process and refine the data using GPT-4
+   - Process and refine the data using GPT-4o
    - Create a JSONL file with the training data
    - Upload the training file to OpenAI
    - Start a fine-tuning job

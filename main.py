@@ -75,8 +75,18 @@ def main():
 
     # Fine-tuning process
     logging.info("Starting fine-tuning process...")
-    training_file_id = fine_tuner.upload_training_file("fine_tuning_data.jsonl")
-    job_id = fine_tuner.create_fine_tune_job(training_file_id)
+    try:
+        training_file_id = fine_tuner.upload_training_file("fine_tuning_data.jsonl")
+    except Exception as e:
+        logging.error(f"Training file upload failed: {str(e)}")
+        sys.exit(1)
+
+    try:
+        job_id = fine_tuner.create_fine_tune_job(training_file_id)
+    except Exception as e:
+        logging.error(f"Fine-tuning job creation failed: {str(e)}")
+        sys.exit(1)
+
     model_id = fine_tuner.monitor_fine_tune_job(job_id)
 
     if model_id:

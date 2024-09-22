@@ -59,6 +59,7 @@ fine_tuning:
   target_examples: 500
   max_tokens: 500000  # Adjust as needed
   monitoring_interval: 60  # in seconds
+  suffix: "NEAR_Ecosystem_Model"  # Optional suffix for your fine-tuned model
 
 # OpenAI API Configuration
 openai:

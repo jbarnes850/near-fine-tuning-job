@@ -100,6 +100,10 @@ class DataProcessor:
             num_tokens = num_tokens_from_messages(example['messages'])
             if total_tokens + num_tokens > max_tokens:
                 break
+            # Validate the example
+            if not self.validate_example(example):
+                logging.warning("Invalid example detected and skipped.")
+                continue
             fine_tuning_data.append(example)
             total_tokens += num_tokens
             if len(fine_tuning_data) >= target_examples:
@@ -108,10 +112,28 @@ class DataProcessor:
         logging.info(f"Total tokens: {total_tokens}")
         return fine_tuning_data
 
+    def validate_example(self, example):
+        """Validate a single example to ensure it meets OpenAI's requirements."""
+        required_keys = {'messages'}
+        if not isinstance(example, dict):
+            return False
+        if not required_keys.issubset(example.keys()):
+            return False
+        if not isinstance(example['messages'], list):
+            return False
+        for message in example['messages']:
+            if 'role' not in message or 'content' not in message:
+                return False
+            if message['role'] not in ['system', 'user', 'assistant']:
+                return False
+            if not isinstance(message['content'], str) or not message['content'].strip():
+                return False
+        return True
+
     def save_as_jsonl(self, data, output_file="fine_tuning_data.jsonl"):
-        """Save data to a JSONL file."""
-        with open(output_file, 'w') as f:
+        """Save data to a JSONL file with UTF-8 encoding and proper escaping."""
+        with open(output_file, 'w', encoding='utf-8') as f:
             for item in data:
-                json.dump(item, f)
-                f.write('\n')
+                json_line = json.dumps(item, ensure_ascii=False)
+                f.write(json_line + '\n')
         logging.info(f"Fine-tuning data saved to {output_file}")
