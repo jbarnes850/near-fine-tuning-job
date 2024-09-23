@@ -5,12 +5,12 @@ from tqdm import tqdm
 import random
 import json
 from tiktoken import get_encoding
-from openai import OpenAI
+import openai 
 
 class DataProcessor:
-    def __init__(self, openai_client, config):
-        self.client = openai_client
+    def __init__(self, config):
         self.config = config
+        openai.api_key = os.getenv("OPENAI_API_KEY")
 
     def process_repo_data(self, repo_data):
         """Process repository data into prompts."""
@@ -50,29 +50,49 @@ class DataProcessor:
 
     @error_handler
     def generate_refined_examples(self, processed_data):
-        """Use GPT-4o-mini to refine prompts and generate completions."""
+        """Generate assistant responses for each prompt using OpenAI API."""
         refined_examples = []
-        batch_size = self.config['example_generation']['batch_size']
-        batches = list(split_list(processed_data, batch_size))
-        for batch in tqdm(batches, desc="Generating refined examples"):
+        random.shuffle(processed_data)  # Shuffle the order of the prompts
+        for data in tqdm(processed_data, desc="Generating refined examples"):
             messages = [
-                {"role": "system", "content": "You are an AI assistant specializing in NEAR Protocol and blockchain technology. Your task is to refine prompts and generate detailed completions for fine-tuning a language model."}
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a highly knowledgeable and helpful assistant specialized in NEAR Protocol development, "
+                        "blockchain architecture, and AI technologies within the NEAR ecosystem. "
+                        "Your primary tasks include generating accurate and efficient code examples, providing detailed explanations of NEAR's architecture, "
+                        "and assisting developers with technical guidance. "
+                        "When generating code, use appropriate programming languages such as Rust, TypeScript, and JavaScript. "
+                        "Adhere to NEAR's coding standards and best practices, and include comprehensive comments. "
+                        "Ensure all code is functional, secure, and optimized for performance. "
+                        "Provide clear, concise, and informative responses to enhance developers' understanding and implementation of NEAR technologies. "
+                        "NEAR Protocol is a blockchain platform that allows developers to build and deploy smart contracts and decentralized applications (dApps) on its blockchain network. "
+                        "Write for a technical audience and prioritize clarity and accuracy in your responses. Developers are your primary users, so ensure your explanations are comprehensive and easy to understand. "
+                        "This fine-tuning data will be used to improve the assistant's ability to understand and generate code and explanations related to NEAR. "
+                        "Focus on creating concise and informative responses that are both technically accurate and easy to understand. "
+                        "Use markdown code blocks to format your responses, and include inline comments to explain your code. "
+                        "When providing answers, ensure they are structured in a way that is easy to follow and implement. "
+                        "Include examples where applicable to illustrate your points effectively."
+                    ),
+                },
+                {"role": "user", "content": data['prompt']}
             ]
-            for item in batch:
-                messages.append({"role": "user", "content": item['prompt']})
-
-            response = self.client.chat.completions.create(
-                model=self.config['openai']['model'],
-                messages=messages,
-                temperature=self.config['openai']['temperature'],
-                max_tokens=self.config['openai']['max_tokens']
-            )
-            assistant_message = response.choices[0].message.content
-
-            # Process assistant's response and generate new examples
-            # Assuming the assistant returns structured data
-            prompts_and_completions = self.parse_assistant_response(assistant_message)
-            refined_examples.extend(prompts_and_completions)
+            try:
+                response = openai.chat.completions.create(
+                    model=self.config['openai']['model'],
+                    messages=messages,
+                    temperature=self.config['openai']['temperature'],
+                    max_tokens=self.config['openai']['max_tokens']
+                )
+                assistant_message = response.choices[0].message['content']
+                refined_examples.append({
+                    "messages": [
+                        {"role": "user", "content": data['prompt']},
+                        {"role": "assistant", "content": assistant_message}
+                    ]
+                })
+            except Exception as e:
+                logging.error(f"Failed to generate response for prompt: {data['prompt']}\nError: {e}")
         return refined_examples
 
     def parse_assistant_response(self, response_content):

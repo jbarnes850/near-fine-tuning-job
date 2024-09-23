@@ -2,6 +2,7 @@ import logging
 from functools import wraps
 import time
 import tiktoken
+import openai
 
 def setup_logging(config):
     """Set up logging based on the configuration."""
@@ -76,3 +77,15 @@ def retry_on_exception(exceptions, max_retries=3, delay=5):
                 raise last_exception
         return wrapper
     return decorator
+
+def validate_openai_api_key():
+    """Validate the OpenAI API key by making a simple API call."""
+    try:
+        openai.Engine.list()
+        logging.info("OpenAI API key validated successfully.")
+    except openai.error.AuthenticationError:
+        logging.error("Invalid OpenAI API key.")
+        raise
+    except Exception as e:
+        logging.error(f"Failed to validate OpenAI API key: {e}")
+        raise
