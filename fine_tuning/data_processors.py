@@ -4,6 +4,8 @@ from tqdm import tqdm
 import random
 import json
 from tiktoken import get_encoding
+from openai import OpenAI
+client = OpenAI()
 
 class DataProcessor:
     def __init__(self, openai_client, config):
@@ -59,13 +61,13 @@ class DataProcessor:
             for item in batch:
                 messages.append({"role": "user", "content": item['prompt']})
 
-            response = self.client.create_chat_completion(
+            response = self.client.chat.completions.create(
                 model=self.config['openai']['model'],
                 messages=messages,
                 temperature=self.config['openai']['temperature'],
                 max_tokens=self.config['openai']['max_tokens']
             )
-            assistant_message = response['choices'][0]['message']['content']
+            assistant_message = response.choices[0].message['content']
 
             # Process assistant's response
             # Assuming the assistant returns structured data
