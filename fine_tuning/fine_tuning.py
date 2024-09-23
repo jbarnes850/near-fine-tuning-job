@@ -1,23 +1,16 @@
 import logging
 import os
 import time
-from openai import OpenAI
 import openai
+from openai import OpenAI
+from .utils import error_handler
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 class FineTuner:
     def __init__(self, config):
         self.config = config
-        from fine_tuning.utils import error_handler  # Move import here
-        self.error_handler = error_handler
 
-    @property
-    def error_handler(self):
-        from fine_tuning.utils import error_handler
-        return error_handler
-
-    # Use self.error_handler instead of error_handler in your methods
     @error_handler
     def upload_training_file(self, file_path):
         """Upload the training file to OpenAI with validation."""
@@ -82,12 +75,14 @@ class FineTuner:
 
         # Create the fine-tuning job
         try:
-            response = openai.FineTuning.create(training_file=training_file_id,
-            model=model,
-            n_epochs=self.config['fine_tuning']['n_epochs'],
-            learning_rate_multiplier=self.config['fine_tuning']['learning_rate_multiplier'],
-            prompt_loss_weight=self.config['fine_tuning']['prompt_loss_weight'],
-            suffix=self.config['fine_tuning'].get('suffix', ''))
+            response = client.fine_tuning.jobs.create(
+                training_file=training_file_id,
+                model=model,
+                hyperparameters={
+                    "n_epochs": self.config['fine_tuning']['n_epochs'],
+                    "learning_rate_multiplier": self.config['fine_tuning']['learning_rate_multiplier'],
+                }
+            )
             job_id = response.id
             logging.info(f"Fine-tuning job created successfully. Job ID: {job_id}")
             return job_id
@@ -101,7 +96,7 @@ class FineTuner:
         logging.info(f"Monitoring fine-tuning job: {job_id}")
         while True:
             try:
-                response = openai.FineTuning.retrieve(job_id)
+                response = client.fine_tuning.jobs.retrieve(job_id)
                 status = response.status
                 logging.info(f"Job status: {status}")
                 if status == 'succeeded':
@@ -109,7 +104,7 @@ class FineTuner:
                     logging.info(f"Fine-tuning succeeded. Fine-tuned model ID: {model_id}")
                     return model_id
                 elif status in ['failed', 'cancelled']:
-                    error_message = response.get('status_details', 'Unknown error')
+                    error_message = response.status_details
                     logging.error(f"Fine-tuning {status}. Reason: {error_message}")
                     return None
                 else:
