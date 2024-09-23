@@ -1,11 +1,11 @@
 import logging
 import sys
-from .config import load_config, validate_config
-from .utils import setup_logging, estimate_cost, num_tokens_from_messages, error_handler
-from .api_clients import get_github_client, initialize_openai, validate_openai_api_key
-from .data_fetchers import DataFetcher
-from .data_processors import DataProcessor
-from .fine_tuning import FineTuner
+from fine_tuning.config import load_config, validate_config
+from fine_tuning.utils import setup_logging, estimate_cost, num_tokens_from_messages, error_handler
+from fine_tuning.api_clients import get_github_client, initialize_openai, validate_openai_api_key
+from fine_tuning.data_fetchers import DataFetcher
+from fine_tuning.data_processors import DataProcessor
+from fine_tuning.fine_tuning import FineTuner
 
 @error_handler
 def main():

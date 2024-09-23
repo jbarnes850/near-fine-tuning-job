@@ -62,14 +62,17 @@ def retry_on_exception(exceptions, max_retries=3, delay=5):
         @wraps(func)
         def wrapper(*args, **kwargs):
             retries = 0
+            last_exception = None
             while retries < max_retries:
                 try:
                     return func(*args, **kwargs)
                 except exceptions as e:
+                    last_exception = e
                     retries += 1
                     logging.warning(f"Retrying {func.__name__} due to {e}. Attempt {retries}/{max_retries}")
                     time.sleep(delay)
             logging.error(f"Failed after {max_retries} retries.")
-            raise
+            if last_exception:
+                raise last_exception
         return wrapper
     return decorator

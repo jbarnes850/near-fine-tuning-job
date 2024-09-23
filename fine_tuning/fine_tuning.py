@@ -28,8 +28,7 @@ class FineTuner:
         # Attempt to upload the file
         try:
             with open(file_path, 'rb') as f:
-                response = client.files.create(file=f,
-                purpose='fine-tune')
+                response = client.files.create(file=f, purpose='fine-tune')
             file_id = response.id
             logging.info(f"Training file uploaded successfully. File ID: {file_id}")
         except openai.OpenAIError as e:
@@ -75,13 +74,13 @@ class FineTuner:
 
         # Create the fine-tuning job
         try:
-            response = client.fine_tuning.jobs.create(
+            response = client.fine_tunes.create(
                 training_file=training_file_id,
                 model=model,
-                hyperparameters={
-                    "n_epochs": self.config['fine_tuning']['n_epochs'],
-                    "learning_rate_multiplier": self.config['fine_tuning']['learning_rate_multiplier'],
-                }
+                n_epochs=self.config['fine_tuning']['n_epochs'],
+                learning_rate_multiplier=self.config['fine_tuning']['learning_rate_multiplier'],
+                prompt_loss_weight=self.config['fine_tuning']['prompt_loss_weight'],
+                suffix=self.config['fine_tuning'].get('suffix', '')
             )
             job_id = response.id
             logging.info(f"Fine-tuning job created successfully. Job ID: {job_id}")
@@ -96,7 +95,7 @@ class FineTuner:
         logging.info(f"Monitoring fine-tuning job: {job_id}")
         while True:
             try:
-                response = client.fine_tuning.jobs.retrieve(job_id)
+                response = client.fine_tunes.retrieve(job_id)
                 status = response.status
                 logging.info(f"Job status: {status}")
                 if status == 'succeeded':

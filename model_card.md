@@ -108,10 +108,8 @@ model_name = "jbarnes850/near-ecosystem-model"
 
 model = AutoModelForCausalLM.from_pretrained(model_name)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
-```
 
-```python
-input_text = "How does dyanmic sharding work on NEAR?"
+input_text = "How does dynamic sharding work on NEAR?"
 
 inputs = tokenizer(input_text, return_tensors="pt")
 outputs = model.generate(**inputs, max_length=100)
@@ -119,7 +117,7 @@ outputs = model.generate(**inputs, max_length=100)
 print(tokenizer.decode(outputs[0], skip_special_tokens=True))
 ```
 
-Fine-Tuning
+## Fine-Tuning
 
 The model was fine-tuned using the following data:
 
@@ -135,15 +133,15 @@ The model was fine-tuned using the following data:
 
 The fine-tuning process was conducted using the Hugging Face Transformers library. The model was trained with a focus on code generation and understanding, with a focus on the NEAR ecosystem.
 
-Training Process
+### Training Process
 
 The model was trained using a custom dataset of NEAR Protocol documentation, code, and community content. The dataset was preprocessed and tokenized using the Hugging Face Transformers library. The model was trained using a combination of masked language modeling and sequence classification tasks.
 
-Evaluation
+### Evaluation
 
 The model was evaluated using a combination of unit tests and manual reviews. The unit tests were designed to verify the model's performance on a variety of prompts and use cases within the NEAR ecosystem. The manual reviews were conducted to ensure the model's outputs were accurate and relevant.
 
-Limitations
+## Limitations
 
 The model is designed to provide information and assistance related to the NEAR ecosystem. It is not intended to be a general-purpose language model and may not be suitable for all use cases. Users should be aware of the model's limitations and use it responsibly.
 

@@ -5,53 +5,44 @@ import requests
 from bs4 import BeautifulSoup
 import pickle
 from datetime import datetime, timedelta
+from PyPDF2 import PdfReader
+from io import BytesIO
 
 class DataFetcher:
     def __init__(self, github_client, config):
         self.github_client = github_client
         self.config = config
-        self.cache_dir = self.config['cache']['dir']
+        self.cache_dir = config['cache']['dir']
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
 
     @error_handler
+    @retry_on_exception(exceptions=(requests.RequestException,))
     def fetch_repo_data(self, repo_name):
-        """Fetch data from a GitHub repository."""
+        """Fetch and process repository data from a given GitHub repository."""
         logging.info(f"Fetching repository data: {repo_name}")
         cached_data = self.get_cached_data(repo_name, is_repo=True)
         if cached_data:
             logging.info(f"Using cached data for repository: {repo_name}")
             return cached_data
 
-        try:
-            repo = self.github_client.get_repo(repo_name)
-        except Exception as e:
-            logging.error(f"Error fetching repository {repo_name}: {e}")
-            return []
-
-        repo_data = []
+        repo = self.github_client.get_repo(repo_name)
         contents = repo.get_contents("")
-        files_to_process = []
+        repo_data = self._process_contents(contents, repo)
+        self.save_cached_data(repo_name, repo_data, is_repo=True)
+        logging.info(f"Successfully fetched repository: {repo_name}")
+        return repo_data
 
+    def _process_contents(self, contents, repo):
+        """Recursively process repository contents."""
+        repo_data = []
         while contents:
             file_content = contents.pop(0)
-            if file_content.type == 'dir':
+            if file_content.type == "dir":
                 contents.extend(repo.get_contents(file_content.path))
             else:
-                file_path = file_content.path
-                if any(file_path.endswith(ext) for ext in self.config['data_processing']['extensions']):
-                    files_to_process.append(file_content)
-
-        for file_content in files_to_process:
-            try:
-                file_data = repo.get_contents(file_content.path)
-                content = file_data.decoded_content.decode('utf-8', errors='ignore')
-                repo_data.append((file_content.path, content))
-            except Exception as e:
-                logging.warning(f"Could not fetch content for file {file_content.path}: {e}")
-
-        self.save_cached_data(repo_name, repo_data, is_repo=True)
-        logging.info(f"Repository data fetched: {repo_name}")
+                file_data = repo.get_contents(file_content.path).decoded_content.decode("utf-8")
+                repo_data.append((file_content.path, file_data))
         return repo_data
 
     @error_handler
@@ -64,22 +55,52 @@ class DataFetcher:
             logging.info(f"Using cached data for article: {url}")
             return cached_data
 
-        response = requests.get(url, timeout=30)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.content, 'html.parser')
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+        }
 
-        content = soup.find('main') or soup.find('article') or soup.find('div', class_='content')
-        if not content:
-            content = soup.body
+        try:
+            response = requests.get(url, headers=headers, timeout=30)
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            if response.status_code == 403:
+                logging.error(f"Access forbidden for URL: {url}")
+                return ""
+            else:
+                raise e
 
-        if content:
-            article_text = content.get_text(separator='\n', strip=True)
-            article_text = ' '.join(article_text.split())
+        if 'application/pdf' in response.headers.get('Content-Type', ''):
+            article_text = self._extract_text_from_pdf(response.content)
+        else:
+            article_text = self._extract_text_from_html(response.content)
+
+        if article_text:
             self.save_cached_data(url, article_text, is_repo=False)
             logging.info(f"Successfully fetched article: {url}")
             return article_text
         else:
             logging.warning(f"Could not find content in article: {url}")
+            return ""
+
+    def _extract_text_from_html(self, html_content):
+        """Extract text from HTML content."""
+        soup = BeautifulSoup(html_content, 'html.parser')
+        content = soup.find('main') or soup.find('article') or soup.find('div', class_='content') or soup.body
+        if content:
+            article_text = content.get_text(separator='\n', strip=True)
+            return ' '.join(article_text.split())
+        return ""
+
+    def _extract_text_from_pdf(self, pdf_content):
+        """Extract text from PDF content."""
+        try:
+            pdf_reader = PdfReader(BytesIO(pdf_content))
+            text = ""
+            for page in pdf_reader.pages:
+                text += page.extract_text()
+            return text
+        except Exception as e:
+            logging.error(f"Failed to extract text from PDF: {e}")
             return ""
 
     def get_cached_data(self, identifier, is_repo=False):

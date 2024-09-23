@@ -4,12 +4,14 @@ We're open sourcing a fine-tuned language model that's deeply versed in the NEAR
 
 ## Key Features
 
-- **Up-to-Date Data**: Incorporates the latest data from NEAR repositories and ecosystem updates.
-- **Optimized Understanding**: Enhanced for understanding and generating NEAR-related code and content.
-- **Content Splitting**: Utilizes content splitting for better processing of large documents.
-- **Diverse Prompts**: Generates diverse prompts for both repository files and articles.
-- **Advanced Data Refinement**: Leverages GPT-4o and GPT-4o-mini for data refinement and fine-tuning.
-- **Comprehensive Testing**: Includes tests to validate fine-tuning components and evaluate model performance.
+Fine-tuning ensures the model is highly specialized and accurate, making it a powerful tool for developers working within the NEAR ecosystem.
+
+- **Up-to-Date Data**: Incorporates the latest data from NEAR repositories and ecosystem updates, ensuring relevance and accuracy.
+- **Optimized Understanding**: Enhanced for understanding and generating NEAR-related code and content, improving developer productivity.
+- **Content Splitting**: Utilizes content splitting for better processing of large documents, enabling efficient data handling.
+- **Diverse Prompts**: Generates diverse prompts for both repository files and articles, broadening the model's applicability.
+- **Advanced Data Refinement**: Leverages GPT-4o and GPT-4o-mini for data refinement and fine-tuning, enhancing model performance.
+- **Comprehensive Testing**: Includes tests to validate fine-tuning components and evaluate model performance, ensuring reliability and robustness.
 
 ## Installation
 
@@ -52,7 +54,7 @@ To use the NEAR Ecosystem Fine-Tuned Model, follow these steps:
 2. **Run the fine-tuning script:**
 
    ```bash
-   python main.py
+   python -m fine_tuning.main
    ```
 
    This script will:

@@ -59,7 +59,7 @@ class DataProcessor:
             for item in batch:
                 messages.append({"role": "user", "content": item['prompt']})
 
-            response = self.client.ChatCompletion.create(
+            response = self.client.create_chat_completion(
                 model=self.config['openai']['model'],
                 messages=messages,
                 temperature=self.config['openai']['temperature'],
