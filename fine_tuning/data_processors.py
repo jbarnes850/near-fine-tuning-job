@@ -1,11 +1,11 @@
 import logging
+import os
 from fine_tuning.utils import error_handler, num_tokens_from_messages, split_list
 from tqdm import tqdm
 import random
 import json
 from tiktoken import get_encoding
 from openai import OpenAI
-client = OpenAI()
 
 class DataProcessor:
     def __init__(self, openai_client, config):
@@ -67,9 +67,9 @@ class DataProcessor:
                 temperature=self.config['openai']['temperature'],
                 max_tokens=self.config['openai']['max_tokens']
             )
-            assistant_message = response.choices[0].message['content']
+            assistant_message = response.choices[0].message.content
 
-            # Process assistant's response
+            # Process assistant's response and generate new examples
             # Assuming the assistant returns structured data
             prompts_and_completions = self.parse_assistant_response(assistant_message)
             refined_examples.extend(prompts_and_completions)
