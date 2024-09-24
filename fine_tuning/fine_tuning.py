@@ -3,7 +3,7 @@ import os
 import time
 import openai
 from openai import OpenAI
-from .utils import error_handler
+from fine_tuning.utils import error_handler
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
