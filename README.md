@@ -2,16 +2,21 @@
 
 We're open sourcing a fine-tuned language model that's deeply versed in the NEAR ecosystem, designed specifically for developers like you.
 
-## Key Features
+## Key Features and Use Cases
 
-Fine-tuning ensures the model is highly specialized and accurate, making it a powerful tool for developers working within the NEAR ecosystem.
+This model is your go-to tool for building AI and Web3 applications within the NEAR ecosystem. Whether you're working on onchain AI agents or generating code, this model has you covered.
 
-- **Up-to-Date Data**: Incorporates the latest data from NEAR repositories and ecosystem updates, ensuring relevance and accuracy.
-- **Optimized Understanding**: Enhanced for understanding and generating NEAR-related code and content, improving developer productivity.
-- **Content Splitting**: Utilizes content splitting for better processing of large documents, enabling efficient data handling.
-- **Diverse Prompts**: Generates diverse prompts for both repository files and articles, broadening the model's applicability.
-- **Advanced Data Refinement**: Leverages GPT-4o and GPT-4o-mini for data refinement and fine-tuning, enhancing model performance.
-- **Comprehensive Testing**: Includes tests to validate fine-tuning components and evaluate model performance, ensuring reliability and robustness.
+### Key Features
+
+- **This model is meticulously fine-tuned for the NEAR ecosystem**. Utilizing the GitHub API, we directly extracted data from NEAR codebases and fine-tuned the model on 50 million tokens and 5,000 example prompts over 4 epochs. This rigorous training process ensures a highly performant and specialized model adept at understanding the intricacies of NEAR.
+
+- **The model excels in generating accurate and efficient code in Rust, TypeScript, and JavaScript**. It adheres to NEAR's coding standards and best practices, making it a valuable tool for developers seeking to produce high-quality code.
+
+- **This model is optimized to enhance the memory and performance of onchain agents**. It aids agents in comprehending and navigating the complexities of the NEAR ecosystem.
+
+- **A comprehensive test suite is included in the repository to benchmark the model's performance**. This ensures the reliability of the fine-tuning components and the model's exceptional performance in real-world scenarios.
+
+- **The model is designed for a wide range of applications, from building AI and Web3 applications to generating code and enhancing onchain agents**.
 
 ## Installation
 
