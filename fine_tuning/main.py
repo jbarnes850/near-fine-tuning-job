@@ -64,7 +64,7 @@ def main():
 
     # Estimate cost
     total_tokens = sum(num_tokens_from_messages(example['messages']) for example in fine_tuning_data)
-    estimated_cost = estimate_cost(total_tokens, cost_per_1k_tokens=0.03)  # Adjust cost per 1K tokens as needed
+    estimated_cost = estimate_cost(total_tokens, cost_per_1k_tokens=0.0025)  # Adjust cost per 1K tokens as needed
     logging.info(f"Estimated fine-tuning cost: ${estimated_cost:.2f}")
 
     # Confirm fine-tuning process

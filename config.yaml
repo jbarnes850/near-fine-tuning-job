@@ -57,8 +57,8 @@ fine_tuning:
   n_epochs: 4
   learning_rate_multiplier: 0.1
   prompt_loss_weight: 0.01
-  target_examples: 500
-  max_tokens: 500000  # Adjust as needed
+  target_examples: 5000
+  max_tokens: 50000000 # Adjust as needed
   monitoring_interval: 60  # in seconds
   suffix: "NEAR_Ecosystem_Model"  # Optional suffix for your fine-tuned model
 
