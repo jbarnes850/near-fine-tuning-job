@@ -96,6 +96,7 @@ class FineTuner:
         while True:
             try:
                 response = client.fine_tuning.jobs.retrieve(job_id)
+                logging.info(f"Job response: {response}")  # Log the entire response object
                 status = response.status
                 logging.info(f"Job status: {status}")
                 if status == 'succeeded':
@@ -103,11 +104,14 @@ class FineTuner:
                     logging.info(f"Fine-tuning succeeded. Fine-tuned model ID: {model_id}")
                     return model_id
                 elif status in ['failed', 'cancelled']:
-                    error_message = response.status_details
+                    # Access the error message properly
+                    error_message = response.error['message'] if response.error else 'No error details provided'
                     logging.error(f"Fine-tuning {status}. Reason: {error_message}")
                     return None
                 else:
+                    # Wait before the next status check
                     time.sleep(self.config['fine_tuning'].get('monitoring_interval', 60))
             except openai.OpenAIError as e:
                 logging.error(f"Error while checking fine-tuning job status: {e}")
+                # Wait before retrying in case of an API error
                 time.sleep(self.config['fine_tuning'].get('monitoring_interval', 60))
