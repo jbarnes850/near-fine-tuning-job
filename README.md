@@ -72,15 +72,23 @@ To use the NEAR Ecosystem Fine-Tuned Model, follow these steps:
 4. **To use the fine-tuned model in your applications, use the OpenAI API with the provided model ID:**
 
    ```python
-   import openai
+   from openai import OpenAI
+   client = OpenAI()
 
-   openai.api_key = 'your_openai_api_key'
-   response = openai.ChatCompletion.create(
-       model='your_fine_tuned_model_id',
+   response = client.chat.completions.create(
+       model='ft:gpt-4o-2024-08-06:personal:near-ecosystem:AB2aZGVL',
        messages=[
            {"role": "system", "content": "You are a NEAR Protocol expert."},
            {"role": "user", "content": "Explain NEAR's sharding mechanism."}
-       ]
+       ],
+       temperature=1,
+       max_tokens=2048,
+       top_p=1,
+       frequency_penalty=0,
+       presence_penalty=0,
+       response_format={
+           "type": "text"
+       }
    )
    print(response.choices[0].message.content)
    ```
