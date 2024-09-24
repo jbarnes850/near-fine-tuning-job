@@ -1,14 +1,10 @@
 # NEAR Ecosystem Fine-Tuned Model
 
-We're open sourcing a fine-tuned language model that's deeply versed in the NEAR ecosystem, designed specifically for developers like you.
-
-## Key Features and Use Cases
-
-This model is your go-to tool for building AI and Web3 applications within the NEAR ecosystem. Whether you're working on onchain AI agents or generating code, this model has you covered.
+We're open sourcing a fine-tuned GPT-4o model that's deeply versed in the NEAR ecosystem, designed specifically for developers like you.
 
 ### Key Features
 
-- **This model is meticulously fine-tuned for the NEAR ecosystem**. Utilizing the GitHub API, we directly extracted data from NEAR codebases and fine-tuned the model on 50 million tokens and 5,000 example prompts over 4 epochs. This rigorous training process ensures a highly performant and specialized model adept at understanding the intricacies of NEAR.
+- **This GPT-4o model is fine-tuned for the NEAR ecosystem**. Utilizing the GitHub API, we directly extracted data from NEAR codebases and fine-tuned the model on 50 million tokens and 5,000 example prompts over 4 epochs. This training process has proven to be a highly performant and specialized model adept at understanding the intricacies of NEAR.
 
 - **The model excels in generating accurate and efficient code in Rust, TypeScript, and JavaScript**. It adheres to NEAR's coding standards and best practices, making it a valuable tool for developers seeking to produce high-quality code.
 
