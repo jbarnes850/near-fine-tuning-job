@@ -86,7 +86,7 @@ class DataProcessor:
                     temperature=self.config['openai']['temperature'],
                     max_tokens=self.config['openai']['max_tokens']
                 )
-                assistant_message = response.choices[0].message['content']
+                assistant_message = response.choices[0].message.content
                 return {
                     "messages": [
                         {"role": "user", "content": data['prompt']},
