@@ -5,12 +5,13 @@ from tqdm import tqdm
 import random
 import json
 from tiktoken import get_encoding
-import openai 
+import openai
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class DataProcessor:
-    def __init__(self, config):
+    def __init__(self, openai_client, config):
+        self.client = openai_client
         self.config = config
-        openai.api_key = os.getenv("OPENAI_API_KEY")
 
     def process_repo_data(self, repo_data):
         """Process repository data into prompts."""
@@ -53,7 +54,8 @@ class DataProcessor:
         """Generate assistant responses for each prompt using OpenAI API."""
         refined_examples = []
         random.shuffle(processed_data)  # Shuffle the order of the prompts
-        for data in tqdm(processed_data, desc="Generating refined examples"):
+
+        def process_prompt(data):
             messages = [
                 {
                     "role": "system",
@@ -78,21 +80,30 @@ class DataProcessor:
                 {"role": "user", "content": data['prompt']}
             ]
             try:
-                response = openai.chat.completions.create(
+                response = self.client.chat.completions.create(
                     model=self.config['openai']['model'],
                     messages=messages,
                     temperature=self.config['openai']['temperature'],
                     max_tokens=self.config['openai']['max_tokens']
                 )
                 assistant_message = response.choices[0].message['content']
-                refined_examples.append({
+                return {
                     "messages": [
                         {"role": "user", "content": data['prompt']},
                         {"role": "assistant", "content": assistant_message}
                     ]
-                })
+                }
             except Exception as e:
                 logging.error(f"Failed to generate response for prompt: {data['prompt']}\nError: {e}")
+                return None
+
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = [executor.submit(process_prompt, data) for data in processed_data]
+            for future in tqdm(as_completed(futures), total=len(futures), desc="Generating refined examples"):
+                result = future.result()
+                if result:
+                    refined_examples.append(result)
+
         return refined_examples
 
     def parse_assistant_response(self, response_content):

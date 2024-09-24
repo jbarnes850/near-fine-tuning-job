@@ -67,6 +67,7 @@ def main():
     estimated_cost = estimate_cost(total_tokens, cost_per_1k_tokens=0.03)  # Adjust cost per 1K tokens as needed
     logging.info(f"Estimated fine-tuning cost: ${estimated_cost:.2f}")
 
+    # Confirm fine-tuning process
     confirmation = input(f"The estimated cost is ${estimated_cost:.2f}. Proceed with fine-tuning? (y/n): ")
     if confirmation.lower() != 'y':
         logging.info("Fine-tuning process cancelled.")
